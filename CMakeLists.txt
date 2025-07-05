@@ -37,7 +37,9 @@ pico_sdk_init()
 
 add_executable(Sistema-Monitoramento-Temperatura Sistema-Monitoramento-Temperatura.c 
 aht10.c
-aht10.h)
+aht10.h
+picow_tls_client.c
+tls_common.c)
 
 pico_set_program_name(Sistema-Monitoramento-Temperatura "Sistema-Monitoramento-Temperatura")
 pico_set_program_version(Sistema-Monitoramento-Temperatura "0.1")
@@ -59,6 +61,10 @@ target_include_directories(Sistema-Monitoramento-Temperatura PRIVATE
 target_link_libraries(Sistema-Monitoramento-Temperatura 
         hardware_timer
         hardware_i2c
+        pico_cyw43_arch_lwip_threadsafe_background
+        pico_lwip_mbedtls
+        pico_mbedtls
+        pico_stdlib
         )
 
 pico_add_extra_outputs(Sistema-Monitoramento-Temperatura)
