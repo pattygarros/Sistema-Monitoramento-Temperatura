@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mapa de Localizações e Temperatura</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
+
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    #map { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    crossorigin="">
+  </script>
+
+  <script>
+  const API_URL = "https://thingsboard.cloud/api/plugins/telemetry/DEVICE/07bfa5d0-5a71-11f0-9b14-15d3b3a473c1/values/timeseries?keys=temperatura,latitude,longitude&startTs=1751769600000&endTs=1752028799000";
+
+  const TOKEN = "";
+
+  async function fetchData() {
+    try {
+      const response = await fetch(API_URL, {
+        headers: { "Authorization": `Bearer ${TOKEN}` }
+      });
+      if (!response.ok) throw new Error("Erro ao buscar dados: " + response.statusText);
+      const data = await response.json();
+      console.log("Dados brutos:", data);
+
+      // Cria mapas de timestamp -> valor
+      const latMap = {};
+      const lonMap = {};
+      const tempMap = {};
+
+      (data.latitude || []).forEach(d => { latMap[d.ts] = parseFloat(d.value); });
+      (data.longitude || []).forEach(d => { lonMap[d.ts] = parseFloat(d.value); });
+      (data.temperatura || []).forEach(d => { tempMap[d.ts] = parseFloat(d.value); });
+
+      // Combina pontos que tenham latitude e longitude
+      const points = [];
+
+      for (const ts in latMap) {
+        const lat = latMap[ts];
+        const lon = lonMap[ts];
+        if (
+          typeof lat === "number" &&
+          typeof lon === "number" &&
+          lat >= -90 && lat <= 90 &&
+          lon >= -180 && lon <=180
+        ) {
+          // Encontra temperatura mais próxima no tempo
+          let closestTemp = null;
+          let minDiff = Infinity;
+          for (const t in tempMap) {
+            const diff = Math.abs(parseInt(ts) - parseInt(t));
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestTemp = tempMap[t];
+            }
+          }
+
+          points.push({
+            lat,
+            lon,
+            temperatura: closestTemp,
+            ts: parseInt(ts)
+          });
+        }
+      }
+
+      console.log("Pontos processados:", points);
+      return points;
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao buscar dados.");
+      return [];
+    }
+  }
+
+  async function initMap() {
+    const points = await fetchData();
+    const map = L.map("map").setView([-14.2350, -51.9253], 4);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    if (points.length === 0) {
+      alert("Nenhum ponto encontrado.");
+      return;
+    }
+
+    points.forEach(p => {
+      const marker = L.circleMarker([p.lat, p.lon], {
+        radius: 6,
+        color: 'blue',
+        fillColor: '#30f',
+        fillOpacity: 0.7
+      }).addTo(map);
+
+      const date = new Date(p.ts);
+      const dateStr = date.toISOString();
+
+      marker.bindPopup(`
+        <b>Data:</b> ${dateStr}<br/>
+        <b>Temperatura:</b> ${p.temperatura ?? "N/A"} °C
+      `);
+    });
+
+    const latlngs = points.map(p => [p.lat, p.lon]);
+    map.fitBounds(latlngs);
+  }
+
+  initMap();
+  </script>
+</body>
+</html>
