@@ -34,7 +34,6 @@ project(Sistema-Monitoramento-Temperatura C CXX ASM)
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-
 add_executable(Sistema-Monitoramento-Temperatura Sistema-Monitoramento-Temperatura.c 
 aht10.c
 aht10.h)
@@ -57,8 +56,10 @@ target_include_directories(Sistema-Monitoramento-Temperatura PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(Sistema-Monitoramento-Temperatura 
-        hardware_timer
+        pico_stdlib
         hardware_i2c
+        pico_cyw43_arch_lwip_threadsafe_background # Para Wi-Fi e LwIP
+        pico_lwip_mqtt # Para o cliente MQTT
         )
 
 pico_add_extra_outputs(Sistema-Monitoramento-Temperatura)
